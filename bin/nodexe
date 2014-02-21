@@ -1,0 +1,92 @@
+#!/bin/sh
+
+SRCDIR=$1
+MAINJS=$2
+
+#
+# Wrap a single js file as a module
+#
+wrap()
+{
+    local path=$1
+
+    echo "define('$path', function(require, module, exports, __dirname, __filename) {"
+
+    grep -roP "require\([\'\"]\.{1,2}(/[a-zA-Z\.\-\_]+)+[\'\"]\)" $path | awk -F: '{print $1}' | while read module; do
+        local dir=$(dirname $path)
+        local mid=${dir}/$(echo $module | awk -F"[\'\"]" '{print $2}')
+
+        if [ ! -e "$mid" ]; then
+            if [ -f "${mid}.js" ]; then
+                mid=${mid}.js
+            fi
+        elif [ -d "$mid" ]; then
+            if [ -f "${mid}/index.js" ]; then
+                mid=${mid}/index.js
+            elif [ -f "${mid}.js" ]; then
+                mid=${mid}.js
+            fi
+        fi
+
+        if [ -e "$mid" ]; then
+            mid=$(realpath $mid)
+        fi
+
+        local escmod=$(echo $module | sed -e 's/\./\\./g' -e 's/\//\\\//g')
+        sed -i "s|${escmod}|require('${mid}', module)|g" $path
+    done 2> /dev/null
+
+    cat $path
+
+    echo "});"
+}
+
+#
+#  definition
+#
+cat << EOF
+var modules = {};
+var definitions = {};
+var dirname = require('path').dirname;
+var basename = require('path').basename;
+
+function _require(path, parent) {
+    if (modules[path]) {
+        return modules[path];
+    }
+
+    var module = {
+        id : path,
+        exports : {},
+        parent : parent,
+        __dirname : dirname(path),
+        __filename : basename(path),
+    };
+    var definition = definitions[path];
+
+    if (!definition) {
+        return require(path);
+    }
+
+    definition(_require, module, module.exports, module.__dirname, module.__filename);
+
+    return modules[path] = module.exports;
+}
+
+function define(path, definition) {
+    definitions[path] = definition;
+}
+
+EOF
+
+#
+# wrap all js as a module
+#
+find $SRCDIR -name "*.js" ! -path "$SRCDIR/node_modules/*" -type f | while read path; do
+    wrap $(realpath $path)
+done
+
+cat << EOF
+
+_require('$(realpath $1)');
+EOF
