@@ -1,6 +1,7 @@
 #!/bin/sh
 
 CWD=$(dirname $0)
+BIN=$(basename $1)
 
 NCPU="$(grep 'cpu cores' /proc/cpuinfo | sort -u | awk -F: '{print $2}')"
 
@@ -52,7 +53,7 @@ wrap()
 
 # Download node
 if [ -f "$HOME/Downloads/$NODE_ARC" ]; then
-    tar -xvf $HOME/Downloads/$NODE_ARC -C $TEMP_DIR || exit 1
+    tar -xf $HOME/Downloads/$NODE_ARC -C $TEMP_DIR || exit 1
 else
     echo "Downloading from $NODE_URL"
     curl $NODE_URL > $TEMP_DIR/$NODE_ARC && tar -xvf $TEMP_DIR/$NODE_ARC -C $TEMP_DIR || exit 1
@@ -112,5 +113,5 @@ patch -p1 -d $TEMP_DIR/$NODE_DIR < $CWD/../patches/$NODE_DIR.patch || exit 1
 # Build node
 $TEMP_DIR/$NODE_DIR/configure \
     && make -j${NCPU} -C $TEMP_DIR/$NODE_DIR \
-    && cp $TEMP_DIR/$NODE_DIR/node $PWD
+    && strip $TEMP_DIR/$NODE_DIR/out/Release/node -o $PWD/${BIN%%.*}
 
