@@ -4,7 +4,7 @@
  // bootstrapping the node.js core. Special caution is given to the performance
  // of the startup process, so many dependencies are invoked lazily.
  (function(process) {
-+  process._eval = 'require("ide");';
++  process._eval = 'require("main");';
 +  process.argv.unshift('node');
 +
    this.global = this;
