@@ -5,10 +5,12 @@ BIN=$(basename $1)
 
 NCPU="$(grep 'cpu cores' /proc/cpuinfo | sort -u | awk -F: '{print $2}')"
 
-NODE_VER="v0.10.21"
+NODE_ORG="http://nodejs.org"
+NODE_PAT="${NODE_ORG}/dist/v\d+(\.\d+)+"
+NODE_VER="$(curl -s ${NODE_ORG} | grep -Po ${NODE_PAT} | head -n 1 | awk -F'/' '{print $NF}')"
 NODE_DIR="node-${NODE_VER}"
 NODE_ARC="${NODE_DIR}.tar.gz"
-NODE_URL="http://nodejs.org/dist/${NODE_VER}/${NODE_ARC}"
+NODE_URL="${NODE_ORG}/dist/${NODE_VER}/${NODE_ARC}"
 
 TEMP_DIR=$(mktemp -d)
 
@@ -56,7 +58,7 @@ if [ -f "$HOME/Downloads/$NODE_ARC" ]; then
     tar -xf $HOME/Downloads/$NODE_ARC -C $TEMP_DIR || exit 1
 else
     echo "Downloading from $NODE_URL"
-    curl $NODE_URL > $TEMP_DIR/$NODE_ARC && tar -xvf $TEMP_DIR/$NODE_ARC -C $TEMP_DIR || exit 1
+    curl $NODE_URL > $TEMP_DIR/$NODE_ARC && tar -xf $TEMP_DIR/$NODE_ARC -C $TEMP_DIR || exit 1
 fi
 
 # definition
